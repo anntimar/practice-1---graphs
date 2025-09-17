@@ -1,4 +1,4 @@
-# Comparativo — pseudocódigo x o que eu implementei
+# Comparativo — pseudocódigo x o que implementamos
 
 A ideia aqui é mostrar, de forma bem direta, onde o nosso código bate com o que vimos em sala.
 Tentamos seguir o **pseudocódigo** e só adaptar o necessário pra ficar simples de ler e rodar.
