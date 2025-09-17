@@ -1,46 +1,97 @@
+# Comparativo — pseudocódigo x o que eu implementei
 
-# Comparativo (Pseudocódigo × Código)
+A ideia aqui é mostrar, de forma bem direta, onde o nosso código bate com o que vimos em sala.
+Tentamos seguir o **pseudocódigo** e só adaptar o necessário pra ficar simples de ler e rodar.
 
-Abaixo, colocamos o **pseudocódigo clássico** (forma resumida) ao lado da referência
-de onde isso aparece no projeto.
+## Cenário 1 — Floyd–Warshall (matriz de menores caminhos)
 
-## Floyd–Warshall (Cenário 1)
+**Por que usamos FW?** Neste cenário precisavamos da **distância de todo mundo para todo mundo** e também do
+**somatório** das distâncias pra achar o vértice “central”. Com o Floyd–Warshall eu já tinhamos a **matriz toda**,
+então ficou fácil somar a linha de cada candidato e escolher o menor.
 
-**Pseudocódigo (alto nível):**
+**Pseudocódigo que vimos:**
+```
+inicializa dist[i][j] = +∞ e dist[i][i] = 0
+para cada aresta (u,v,w): dist[u][v] = w e dist[v][u] = w
+para k = 0..n-1:
+  para i = 0..n-1:
+    para j = 0..n-1:
+      dist[i][j] = min(dist[i][j], dist[i][k] + dist[k][j])
+```
 
-1. Inicialize `dist[i][j] = +∞`; `dist[i][i] = 0`; para cada aresta `(u,v,w)`: `dist[u][v]=w`, `dist[v][u]=w` (grafo não-dirigido).
-2. Para `k = 0..n-1`:
-   - Para `i = 0..n-1`:
-     - Para `j = 0..n-1`:
-       - `dist[i][j] = min(dist[i][j], dist[i][k] + dist[k][j])`.
+**Onde está no código:**
+- Implementação: `src/common.py` → função `floyd_warshall`
+- Uso no cenário: `src/scenario1.py` → função `central_station` (somamos a linha do vértice e pego o menor)
 
-**Código:** [`src/common.py:floyd_warshall`](src/common.py)
+**Observação prática:** somamos `sum(dist[central])` pra comparar candidatos. Também pegamos o mais distante
+a partir do central com `max(dist[central])` (ignorando `inf`).
 
-**Uso no cenário 1:** [`src/scenario1.py:central_station`](src/scenario1.py)
 
-## Bellman–Ford (Cenário 2)
+## Cenário 2 — Bellman–Ford (arestas com pesos negativos)
 
-**Pseudocódigo (alto nível):**
+**Por que usamos BF?** Aqui a energia pode ser **negativa** (regeneração), então Dijkstra não serve. O Bellman–Ford
+funciona com pesos negativos e ainda dá pra detectar **ciclo negativo** (se alcançar o destino, custo ótimo fica indefinido).
 
-1. `dist[src]=0`, demais `+∞`; `parent[v]=-1`.
-2. Repita `n-1` vezes: para cada aresta `(u,v,w)`, se `dist[u]+w < dist[v]`, então
-   atualize `dist[v]=dist[u]+w` e `parent[v]=u`.
-3. Detecção de ciclo negativo: se algum `dist[u]+w < dist[v]` ainda for possível,
-   então há ciclo negativo atingindo (ou propagável até) `v`.
+**Pseudocódigo:**
+```
+dist[src] = 0; demais = +∞; parent[v] = -1
+repete n-1 vezes:
+  para cada aresta (u,v,w):
+    se dist[u] + w < dist[v]: dist[v] = dist[u] + w; parent[v] = u
+// detecção de ciclo negativo (opcional, mas útil):
+se existir (u,v,w) com dist[u] + w < dist[v] após as relaxações, há ciclo negativo
+```
 
-**Código:** [`src/common.py:bellman_ford`](src/common.py)
+**Onde está no código:**
+- Implementação: `src/common.py` → função `bellman_ford` (com marcação de vértices em ciclo negativo alcançáveis)
+- Uso no cenário: `src/scenario2.py` → `min_energy_path` (reconstruimos o caminho com `parent`)
 
-**Uso no cenário 2:** [`src/scenario2.py:min_energy_path`](src/scenario2.py)
+**Observação prática:** se o destino estiver “contaminado” por um ciclo negativo, marcamos e retornamos o custo `NaN`.
+No `graph2.txt` isso **não** acontece; o caminho 0→3→5→6 sai com custo 8.0.
 
-## Dijkstra (Cenário 3)
 
-**Pseudocódigo (alto nível):**
+## Cenário 3 — Dijkstra no grid (4 direções, custos não‑negativos)
 
-1. `dist[src]=0`, demais `+∞`; `parent[v]=-1`.
-2. Use uma fila de prioridade com pares `(dist, u)`.
-3. Extraia `u` com menor `dist[u]`; para cada vizinho `(v,w≥0)`, se `dist[u]+w < dist[v]`
-   atualize `dist[v]` e `parent[v]=u` e re-insira `(dist[v], v)`.
-4. Ao final, `dist[dst]` é o custo ótimo e `parent` reconstrói o caminho.
+**Por que usamos Dijkstra?** No grid os custos são **não‑negativos** (piso normal = 1, difícil `~` = 3, obstáculo `#` é bloqueio),
+então Dijkstra resolve bem. O movimento é 4‑vizinhos (N,S,L,O).
 
-**Código:** [`src/common.py:dijkstra`](src/common.py) e implementação 4-neigh em
-[`src/scenario3.py`](src/scenario3.py).
+**Pseudocódigo:**
+```
+dist[S] = 0; demais = +∞; parent = vazio
+usa fila de prioridade (dist, célula)
+enquanto a fila não estiver vazia:
+  pega célula u com menor dist[u]
+  para cada vizinho v (4 direções):
+    se custo(u→v) >= 0 e dist[u] + custo < dist[v]:
+      atualiza dist[v] e parent[v] e re-insere na fila
+```
+
+**Onde está no código:**
+- Implementação: `src/scenario3.py` → `dijkstra_grid` (e `overlay_path` pra desenhar `*` no trajeto)
+- Regras de custo: `.` ou `=` ou `S/G` = 1; `~` = 3; `#` = intransponível
+
+**Observação prática:** consideramos o **custo de entrar** na célula vizinha. No final, reconstruimos o caminho
+com a matriz `parent` e geramos um ASCII do grid com `*`.
+
+
+## Diferenças pequenas em relação ao que vimos em sala
+
+- Usamos `math.inf` no lugar de `+∞` e listas de adjacência pra representar o grafo.
+- Guardamos `parent` em BF e Dijkstra pra reconstruir o caminho (isso ajuda a mostrar o trajeto).  
+- No Floyd–Warshall, tratamos múltiplas arestas mantendo o menor peso quando monto a matriz.
+- Complexidade: FW = O(n³); BF = O(n·m); Dijkstra (com heap) ≈ O(m log n). Para os tamanhos dos arquivos, ficou tranquilo.
+
+
+## Como testamos (com exemplos)
+
+Dentro da pasta do projeto:
+```
+python main.py cenario1 --graph graph1.txt
+python main.py cenario2 --graph graph2.txt --src 0 --dst 6
+python main.py cenario3 --grid grid_example.txt
+```
+
+As saídas também ficam salvas em:
+- `RESULTADO_CENARIO1.txt`, `RESULTADO_CENARIO2.txt`, `RESULTADO_CENARIO3.txt`
+- E o consolidado: `RESULTADOS.json`
+

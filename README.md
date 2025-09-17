@@ -1,55 +1,76 @@
-
 # Prática 1 — Grafos
 
-Implementações em Python para os três cenários solicitados:
+Neste repositório, implementamos os **três cenários** pedidos na prática, sempre seguindo o
+pseudocódigo visto em sala e mantendo o código o mais simples possível de rodar e ler.
 
-- **Cenário 1 (estação central)**: Floyd–Warshall para obter todas as distâncias e somatórios.
-- **Cenário 2 (energia líquida com regeneração)**: Bellman–Ford (suporta pesos negativos e detecta ciclos negativos).
-- **Cenário 3 (robô no armazém)**: Dijkstra no grid (custos não-negativos; movimento 4-neigh).
+- **Cenário 1 (estação central)** — usamos **Floyd–Warshall** para obter a **matriz de menores caminhos**,
+  somamos a linha de cada vértice e escolhemos aquele com **menor soma** (vértice central).
+- **Cenário 2 (energia líquida com regeneração)** — usamos **Bellman–Ford**, pois há pesos **negativos**;
+  o algoritmo também nos permite **detectar ciclo negativo** que possa contaminar o destino.
+- **Cenário 3 (robô no armazém, 4 direções)** — usamos **Dijkstra** no **grid** com custos não‑negativos
+  (livre = 1, difícil `~` = 3, obstáculo `#` intransponível). No final, geramos um overlay ASCII do caminho.
 
 ## Como rodar
 
-Requer Python 3.10+.
+Requer **Python 3.10+**. No terminal aberto na pasta do projeto:
 
 ```bash
-cd grafos_pratica1_repo
-python3 main.py cenario1 --graph graph1.txt
-python3 main.py cenario2 --graph graph2.txt --src 0 --dst 6
-python3 main.py cenario3 --grid grid_example.txt
+# Cenário 1
+python main.py cenario1 --graph graph1.txt
+
+# Cenário 2
+python main.py cenario2 --graph graph2.txt --src 0 --dst 6
+
+# Cenário 3
+python main.py cenario3 --grid grid_example.txt
 ```
 
-Os comandos imprimem um JSON com os resultados principais. Para o cenário 3,
-o JSON inclui também um *overlay* ASCII do caminho ótimo sobre o grid.
+> Obs.: em alguns ambientes pode ser `python3` no lugar de `python`.  
+> As saídas aparecem no terminal **e** ficam salvas em `RESULTADO_CENARIO*.txt` e `RESULTADOS.json`.
 
-## Estrutura
+### Exemplos de resultados (nos arquivos fornecidos)
 
-```
+- C1: **central = 9 (1-index)**, soma das distâncias = **219**, mais distante da central = **1** (dist **39**).
+- C2: caminho **0 → 3 → 5 → 6**, custo **8.0**, **sem** ciclo negativo alcançando o destino.
+- C3: custo **S→G = 26.0** e overlay ASCII do caminho com `*` no grid.
+
+## Entradas usadas
+
+- `graph1.txt` — grafo **não‑direcionado** com pesos (TAB como separador).
+- `graph2.txt` — grafo **direcionado** com pesos (inclusive negativos).
+- `grid_example.txt` — grid com `S`, `G`, `#`, `~` e células livres (`.` ou `=`). Movimento em 4 direções.
+
+## Decisões 
+
+- **Floyd–Warshall (C1):** precisávamos da **matriz completa** de distâncias para somar por linha; FW resolve isso direto.
+- **Bellman–Ford (C2):** havia **arestas negativas** (regeneração), então Dijkstra não serve; BF também nos dá checagem de **ciclo negativo**.
+- **Dijkstra em grid (C3):** todos os custos são **não‑negativos**, então Dijkstra encontra o caminho ótimo de forma eficiente.
+
+## Estrutura do projeto
+
 grafos_pratica1_repo/
   ├─ main.py
   ├─ src/
-  │   ├─ common.py
-  │   ├─ scenario1.py
-  │   ├─ scenario2.py
-  │   └─ scenario3.py
+  │   ├─ common.py         # rotinas comuns (FW, BF, Dijkstra 1D)
+  │   ├─ scenario1.py      # estação central com FW
+  │   ├─ scenario2.py      # energia líquida com BF
+  │   └─ scenario3.py      # Dijkstra no grid (4 vizinhos) + overlay
   ├─ graph1.txt
   ├─ graph2.txt
-  └─ grid_example.txt
+  ├─ grid_example.txt
+  ├─ RESULTADOS.json
+  ├─ RESULTADO_CENARIO1.txt
+  ├─ RESULTADO_CENARIO2.txt
+  └─ RESULTADO_CENARIO3.txt
 ```
 
-## Justificativa dos algoritmos
+## Observações rápidas de implementação
 
-- **Cenário 1**: requer uma **matriz** de distâncias mínimas entre todos os pares
-  e o **somatório** das distâncias para cada vértice (centralidade pela soma). O
-  Floyd–Warshall entrega diretamente a matriz *all-pairs*, facilitando todos os itens
-  de saída sem precisar rodar n vezes o Dijkstra.
-
-- **Cenário 2**: há arestas de peso **negativo** (regeneração). É caso clássico de
-  **Bellman–Ford**, que funciona para pesos negativos e detecta ciclos negativos
-  (se o destino for alcançável a partir de um ciclo negativo, o custo ótimo é indefinido).
-
-- **Cenário 3**: o grid tem custos **não-negativos** e movimento em 4 direções.
-  **Dijkstra** encontra o menor custo rapidamente e é um dos algoritmos exigidos.
+- Usamos `math.inf` para representar ∞ e **listas de adjacência** nos grafos.
+- Em BF e Dijkstra guardamos `parent` para **reconstruir o caminho**.
+- No FW tratamos múltiplas arestas mantendo o **menor peso**.
+- Complexidade (bem resumida): **FW = O(n³)**; **BF = O(n·m)**; **Dijkstra ≈ O(m log n)**.
 
 ## Licença
 
-MIT.
+MIT
